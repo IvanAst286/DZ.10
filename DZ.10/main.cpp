@@ -2,121 +2,100 @@
 #include <iomanip>
 #include <Windows.h>
 
+char Names[][20] = { "яблочный сок", "апельсиновый сок",
+                         "абрикосовый сок", "грушевый сок",
+                         "томатный сок", "луковый сок",
+                         "огуречный сок", "чесночный чай",
+                         "петрушевый чай" };
 
-const std::string fruits[] = { "яблочный", "апельсиновый", "абрикосовый", "грушевый" };
-const std::string vegetables[] = { "томатный", "луковый", "огуречный" };
-const std::string teas[] = { "чесночный", "петрушевый" };
+double prices[] = { 80, 90, 100, 85,
+                   70, 120, 60, 150,
+                   100 };
 
-const double prices[] = { 30.0, 35.0, 40.0, 45.0,
-                         25.0, 30.0, 35.0,
-                         40.0, 45.0 };
-
-const int F_MAX = sizeof(fruits) / sizeof(fruits[0]);
-const int V_MAX = sizeof(vegetables) / sizeof(vegetables[0]);
-const int T_MAX = sizeof(teas) / sizeof(teas[0]);
-
-
-void requestItemQuantity(const std::string& itemName, int& qty)
+void showGoodsList() 
 {
-    std::cout << itemName << ": ";
-    std::cin >> qty;
-}
-
-
-bool chooseCategory(const std::string& categoryName)
-{
-    char response;
-    std::cout << "Выбрать товары из категории \"" << categoryName << "\"? (Y/N): ";
-    std::cin >> response;
-    return tolower(response) == 'y';
-}
-
-// Размещение заказа
-void placeOrder(int* fruitQ, int* veggieQ, int* teaQ)
-{
-    if (chooseCategory("Фруктовые"))
+    std::cout << "Список товаров:\n";
+    for (int i = 0; i < sizeof(Names) / sizeof(*Names); ++i) 
     {
-        for (int i = 0; i < F_MAX; ++i)
-        {
-            requestItemQuantity(fruits[i], fruitQ[i]);
-        }
-    }
-
-    if (chooseCategory("Овощные"))
-    {
-        for (int i = 0; i < V_MAX; ++i)
-        {
-            requestItemQuantity(vegetables[i], veggieQ[i]);
-        }
-    }
-
-    if (chooseCategory("Чаи"))
-    {
-        for (int i = 0; i < T_MAX; ++i)
-        {
-            requestItemQuantity(teas[i], teaQ[i]);
-        }
+        std::cout << i + 1 << ". " << Names[i] << " (" << prices[i] << " руб./л)\n";
     }
 }
 
-double calculateTotal(int* fruitQ, int* veggieQ, int* teaQ)
-{
-    double total = 0.0;
-
-    for (int i = 0; i < F_MAX; ++i)
-    {
-        total += fruitQ[i] * prices[i];
-    }
-
-    for (int i = 0; i < V_MAX; ++i)
-    {
-        if (i == 1 && veggieQ[i] > 0)
-        {
-            int freeBottles = veggieQ[i] / 4;
-            total += (veggieQ[i] - freeBottles) * prices[F_MAX + i];
-        }
-        else
-        {
-            total += veggieQ[i] * prices[F_MAX + i];
-        }
-    }
-
-    for (int i = 0; i < T_MAX; ++i)
-    {
-        if (i == 1 && teaQ[i] >= 3)
-        {
-            double discount = 0.05 * teaQ[i] * prices[F_MAX + V_MAX + i];
-            total += (teaQ[i] * prices[F_MAX + V_MAX + i]) - discount;
-        }
-        else
-        {
-            total += teaQ[i] * prices[F_MAX + V_MAX + i];
-        }
-    }
-
-    if (total > 200.0)
-    {
-        total *= 0.87;
-    }
-
-    return total;
-}
-
-int main()
+int main() 
 {
     SetConsoleCP(1251);
     SetConsoleOutputCP(1251);
-    srand(static_cast<unsigned>(time(nullptr)));
+    srand(time(NULL));
 
-    int fruitQuantities[F_MAX] = { 0 };
-    int veggieQuantities[V_MAX] = { 0 };
-    int teaQuantities[T_MAX] = { 0 };
+    int userCart[sizeof(prices) / sizeof(*prices)] = {};
 
-    placeOrder(fruitQuantities, veggieQuantities, teaQuantities);
+    showGoodsList();
 
-    double totalBill = calculateTotal(fruitQuantities, veggieQuantities, teaQuantities);
+    while (true) 
+    {
+        int index;
+        std::cout << "Выберите товар (введите номер или 0 для окончания): ";
+        std::cin >> index;
 
-    std::cout << "Итого к оплате: " << std::fixed << std::setprecision(2) << totalBill << " руб.\n";
+        if (index == 0)
+            break;
+
+        if (index <= 0 || index > sizeof(Names) / sizeof(*Names)) 
+        {
+            std::cerr << "Неверный номер товара.\n";
+            continue;
+        }
+
+        int quantity;
+        std::cout << "Количество литров: ";
+        std::cin >> quantity;
+
+        userCart[index - 1] += quantity;
+    }
+
+    double totalCost = 0.0;
+    double discounts = 0.0;
+
+    for (int i = 0; i < sizeof(userCart) / sizeof(*userCart); ++i) 
+    {
+        if (userCart[i] > 0) 
+        {
+            double cost = userCart[i] * prices[i];
+            totalCost += cost;
+
+            if (i == 8 && userCart[i] >= 3) 
+            { 
+                discounts += cost * 0.05; 
+            }
+
+            if (i == 5) 
+            { 
+                int freeBottles = userCart[i] / 4;
+                discounts += freeBottles * prices[i]; 
+            }
+        }
+    }
+
+    const double discountThreshold = 1000.0;
+    if (totalCost > discountThreshold) 
+    {
+        discounts += totalCost * 0.13; 
+    }
+
+    double finalCost = totalCost - discounts;
+
+    std::cout << "\nВаш заказ:\n";
+    for (int i = 0; i < sizeof(userCart) / sizeof(*userCart); ++i) 
+    {
+        if (userCart[i] > 0) 
+        {
+            std::cout << userCart[i] << " литров " << Names[i] << "\n";
+        }
+    }
+
+    std::cout << "\nОбщий счёт без скидок: " << totalCost << " руб." << "\n";
+    std::cout << "Скидки: " << discounts << " руб." << "\n";
+    std::cout << "Итого к оплате: " << finalCost << " руб." << "\n";
 
     return 0;
 }
